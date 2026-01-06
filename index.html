@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Career Coaching Centre – ERP System</title>
+<style>
+body{font-family:Arial;background:#f2f4f7;padding:20px}
+.container{max-width:1200px;margin:auto;background:#fff;padding:20px;border-radius:8px}
+label{font-weight:bold}
+input,textarea,select{width:100%;padding:8px;margin:5px 0}
+button{padding:8px 12px;margin:5px}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ccc;padding:6px;text-align:center}
+@media print{button{display:none}}
+</style>
+</head>
+<body>
+
+<h1 style="text-align:center">Career Coaching Centre</h1>
+<h3 style="text-align:center">Integrated Fee + Attendance Management</h3>
+<h4 style="text-align:center">Admin Dashboard (Local + Cloud Ready)</h4>
+<div id="dashboard" style="background:#eef;padding:10px;border-radius:6px;margin-bottom:15px">
+<b>Total Students:</b> <span id="totalStudents">0</span> |
+<b>Total Fee Collected:</b> ₹<span id="totalCollected">0</span> |
+<b>Total Attendance Records:</b> <span id="totalAttendance">0</span>
+<hr>
+<b>Income / Expenditure Reports</b><br>
+<label>Report Type</label>
+<select id="reportType"><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select>
+<label>Select Date / Month / Year</label>
+<input type="date" id="reportDate">
+<button onclick="printCashReport()">Download Income-Expenditure PDF</button>
+<hr>
+<b>Add Expenditure</b><br>
+<button onclick="printBalanceSheet()">Download Balance Sheet (PDF)</button>
+<br><br><b>Add Expenditure</b><br>
+<label>Expense Date</label>
+<input type="date" id="expDate">
+<label>Expense Head</label>
+<select id="expHead"><option>Rent</option><option>Salary</option><option>Electricity</option><option>Internet</option><option>Stationery</option><option>Maintenance</option><option>Other</option></select>
+<label>Amount (₹)</label>
+<input type="number" id="expAmount">
+<label>Remarks</label>
+<input id="expNote">
+<button onclick="saveExpense()">Save Expenditure</button>
+</div>
+
+<label>Class</label>
+<select id="class"><option>Class VIII</option><option>Class IX</option><option>Class X</option></select>
+
+<label>Roll No</label>
+<input id="roll">
+
+<label>Student Name</label>
+<input id="name">
+
+<label>Student Contact Number</label>
+<input id="contact">
+
+<label>Student Address</label>
+<textarea id="address"></textarea>
+
+<label>Total Fee</label>
+<input type="number" id="total" value="17000">
+
+<label>Concession</label>
+<input type="number" id="concession" value="0" oninput="splitFee()">
+
+<h3>Installments</h3>
+<table>
+<tr><th>Inst</th><th>Date</th><th>Amount</th></tr>
+<tr><td>1</td><td><input type="date" id="d1"></td><td><input id="i1"></td></tr>
+<tr><td>2</td><td><input type="date" id="d2"></td><td><input id="i2"></td></tr>
+<tr><td>3</td><td><input type="date" id="d3"></td><td><input id="i3"></td></tr>
+<tr><td>4</td><td><input type="date" id="d4"></td><td><input id="i4"></td></tr>
+</table>
+
+<h3>Attendance</h3>
+<input type="date" id="attDate">
+<select id="attStatus"><option>Present</option><option>Absent</option></select>
+<button onclick="markAttendance()">Mark Attendance</button>
+
+<h3>Actions</h3>
+<button onclick="saveData()">Save Record</button>
+<button onclick="printCombinedPDF()">Print Fee + Attendance PDF</button>
+<button onclick="sendAttendanceWhatsApp()">Send Attendance WhatsApp</button>
+<button onclick="printIDCard()">Print Student ID Card</button>
+
+<div id="qrcode"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+let receipt=localStorage.getItem('rno')?+localStorage.getItem('rno'):1000;
+function splitFee(){let p=total.value-concession.value;let x=Math.floor(p/4);i1.value=x;i2.value=x;i3.value=x;i4.value=p-x*3}
+
+function saveData(){receipt++;localStorage.setItem('rno',receipt);
+let stu={roll:roll.value,name:name.value,class:class.value,contact:contact.value,address:address.value,total:total.value,concession:concession.value,inst:[{d:d1.value,a:i1.value},{d:d2.value,a:i2.value},{d:d3.value,a:i3.value},{d:d4.value,a:i4.value}]};
+localStorage.setItem(roll.value,JSON.stringify(stu));alert('Saved')}
+
+function markAttendance(){let k=roll.value+'_att';let a=JSON.parse(localStorage.getItem(k))||[];a.push({d:attDate.value,s:attStatus.value});localStorage.setItem(k,JSON.stringify(a));alert('Attendance Saved')}
+
+function printCombinedPDF(){let stu=JSON.parse(localStorage.getItem(roll.value));let att=JSON.parse(localStorage.getItem(roll.value+'_att'))||[];
+let html=`<h2>Career Coaching Centre</h2><h3>Fee & Attendance Report</h3>
+<p>Name:${stu.name}<br>Roll:${stu.roll}<br>Class:${stu.class}<br>Contact:${stu.contact}</p>
+<h4>Fee</h4><p>Total:${stu.total} | Concession:${stu.concession}</p>
+<h4>Attendance</h4><table border=1 width=100%><tr><th>Date</th><th>Status</th></tr>`;
+att.forEach(x=>html+=`<tr><td>${x.d}</td><td>${x.s}</td></tr>`);html+='</table>';
+let w=window.open('');w.document.write(html);w.print()}
+
+function sendAttendanceWhatsApp(){let att=JSON.parse(localStorage.getItem(roll.value+'_att'))||[];
+let msg=`Attendance Report - ${name.value}\n`+att.map(a=>a.d+':'+a.s).join('\n');window.open(`https://wa.me/91${contact.value}?text=${encodeURIComponent(msg)}`)}
+
+function printIDCard(){let data=`${name.value}|${roll.value}|${class.value}`;document.getElementById('qrcode').innerHTML='';new QRCode(document.getElementById('qrcode'),data);
+let w=window.open('');w.document.write(`<h3>Student ID Card</h3><p>${name.value}<br>${roll.value}<br>${class.value}</p>`+document.getElementById('qrcode').innerHTML);w.print()}
+
+function updateDashboard(){
+  let students=0, fee=0, att=0;
+  for(let k in localStorage){
+    if(!k.endsWith('_att') && k!=='rno'){
+      let s=JSON.parse(localStorage.getItem(k));
+      if(s?.roll){ students++; fee+= (+s.total - +s.concession); }
+    }
+    if(k.endsWith('_att')){
+      let a=JSON.parse(localStorage.getItem(k))||[]; att+=a.length;
+    }
+  }
+  totalStudents.innerText=students;
+  totalCollected.innerText=fee;
+  totalAttendance.innerText=att;
+}
+updateDashboard();
+
+function saveExpense(){
+  let arr=JSON.parse(localStorage.getItem('expenses'))||[];
+  arr.push({d:expDate.value,h:expHead.value,a:+expAmount.value,n:expNote.value});
+  localStorage.setItem('expenses',JSON.stringify(arr));
+  alert('Expenditure Saved');
+}
+
+function printBalanceSheet(){
+  let income=0, expense=0;
+  for(let k in localStorage){
+    let s=JSON.parse(localStorage.getItem(k));
+    if(s?.inst){ s.inst.forEach(i=>{ if(i.a) income+=+i.a; }); }
+  }
+  let exps=JSON.parse(localStorage.getItem('expenses'))||[];
+  exps.forEach(e=>expense+=+e.a);
+  let capital = income-expense;
+
+  let html=`<h2>Career Coaching Centre</h2>
+  <h3>Balance Sheet</h3>
+  <table border='1' width='100%' cellpadding='6'>
+  <tr><th>Liabilities</th><th>Amount (₹)</th><th>Assets</th><th>Amount (₹)</th></tr>
+  <tr><td>Capital / Surplus</td><td>${capital}</td><td>Cash Balance</td><td>${capital}</td></tr>
+  <tr><td colspan='4' style='text-align:center'>Prepared on Cash Basis</td></tr>
+  </table>
+  <p><b>Total Assets = Total Liabilities</b></p>`;
+
+  let w=window.open(''); w.document.write(html); w.print();
+}
+
+function printCashReport(){
+  let type=reportType.value;
+  let sel=reportDate.value;
+  if(!sel){ alert('Select date'); return; }
+  let income=0, expense=0;
+
+  for(let k in localStorage){
+    let s=JSON.parse(localStorage.getItem(k));
+    if(s?.inst){ s.inst.forEach(i=>{ if(i.d){
+      if(type==='daily' && i.d===sel) income+=+i.a;
+      if(type==='monthly' && i.d.startsWith(sel.slice(0,7))) income+=+i.a;
+      if(type==='yearly' && i.d.startsWith(sel.slice(0,4))) income+=+i.a;
+    }}); }
+  }
+
+  let exps=JSON.parse(localStorage.getItem('expenses'))||[];
+  exps.forEach(e=>{ if(e.d){
+    if(type==='daily' && e.d===sel) expense+=+e.a;
+    if(type==='monthly' && e.d.startsWith(sel.slice(0,7))) expense+=+e.a;
+    if(type==='yearly' && e.d.startsWith(sel.slice(0,4))) expense+=+e.a;
+  }});
+
+  let profit=income-expense;
+  let html=`<h2>Career Coaching Centre</h2>
+  <h3>${type.toUpperCase()} Income & Expenditure Statement</h3>
+  <p><b>Period:</b> ${sel}</p>
+  <table border='1' width='100%' cellpadding='6'>
+  <tr><th>Total Income</th><th>Total Expenditure</th><th>Net Profit / Loss</th></tr>
+  <tr><td>₹${income}</td><td>₹${expense}</td><td>₹${profit}</td></tr>
+  </table>
+  <p style='margin-top:20px'><b>CA Note:</b> Prepared as per standard cash-basis accounting for audit & filing.</p>`;
+
+  let w=window.open(''); w.document.write(html); w.print();
+}
+}
+
+/* ================= CLOUD BACKUP & MULTI-DEVICE =================
+To enable cloud backup & multi-device access:
+1. Create Firebase project
+2. Enable Firestore Database
+3. Replace localStorage save/load with Firestore sync
+4. Enable Authentication (Admin / Teacher)
+Data Safety:
+- Encrypted HTTPS
+- Role-based access
+- Automatic backup
+=============================================================== */
+</script>
+</body>
+</html>
